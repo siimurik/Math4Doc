@@ -29,7 +29,7 @@ def gauss_legendre_nodes_weights(n):
     for i in range(1, n+1):
         z = m.cos(m.pi * (i - 0.25) / (n + 0.5))
         
-        # Newton's method refinement
+        # Newton–Raphson method to find roots of the Legendre polynomial
         while True:
             p1 = 1.0
             p2 = 0.0
