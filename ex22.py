@@ -22,8 +22,8 @@ def gauss_legendre_nodes_weights(n):
     if not isinstance(n, int) or n < 1:
         raise ValueError("Number of points n must be a positive integer")
     
-    nodes = []
-    weights = []
+    nodes   = [0.0] * n
+    weights = [0.0] * n
     
     # Initial approximations for roots
     for i in range(1, n+1):
