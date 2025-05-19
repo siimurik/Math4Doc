@@ -10,6 +10,8 @@
 #   # 0*x0 + 1*x1 + 7*x2 = 25.5
     # 5*x0 + 1*x1 + 0*x2 = 0.0
     # 1*x0 + 6*x1 + 1*x2 = -10.5
+#------------------------------------------------------------------------------
+# Author: Siim Erik Pugal
 #==============================================================================
 
 
@@ -30,10 +32,10 @@ def gauss_seidel(A, b, x0, tolerance, max_iterations):
     Reference: https://en.wikipedia.org/wiki/Gauss%E2%80%93Seidel_method
     """
     print("\nGauss-Seidel Iteration")
-    print("==================================================")
+    print("===================================================")
     n = len(A)
     x = x0.copy()
-    print(f"Initial guess: x0 = [{', '.join(f'{val:.6f}' for val in x)}]")
+    print(f"Initial guess:  x0 = [{', '.join(f'{val:.6f}' for val in x)}]")
     print(f"Tolerance: {tolerance}, Max iterations: {max_iterations}")
     #converged = False
     
@@ -62,7 +64,7 @@ def gauss_seidel(A, b, x0, tolerance, max_iterations):
     
     print("--------------------------------------------------")
     print(f"Final solution: x = [{', '.join(f'{val:.6f}' for val in x)}]")
-    print("==================================================")
+    print("===================================================")
     #return x, k, converged
 
 def make_diagonally_dominant(A, b):

@@ -1,13 +1,73 @@
+#==============================================================================
+#                               Problem description
+#==============================================================================
+# DETERMINATION OF SPLINES
+#------------------------------------------------------------------------------
+# Find the cubic spline g(x) for the given data with k0 and kn as given.
+# [12.] f0 = f(0) = 1, f1 = f(2) = 9, f2 = f(4) = 41,
+#       f3 = f(6) = 41, k0 = 0, k3 = -12
+#------------------------------------------------------------------------------
+# Author: Siim Erik Pugal
+#==============================================================================
+
+
 def is_close(a, b, rel_tol=1e-9, abs_tol=1e-9):
-    """Numpy-free replacement for np.allclose()"""
+    """
+    Returns True if two arrays are element-wise equal within a tolerance.
+
+    Parameters
+    ----------
+    a, b : array_like
+        Input arrays to compare.
+    rtol : array_like
+        The relative tolerance parameter.
+    atol : array_like
+        The absolute tolerance parameter.
+
+    Returns
+    -------
+    allclose : bool
+        Returns True if the two arrays are equal within the given
+        tolerance; False otherwise.
+    
+    Reference: https://numpy.org/doc/2.1/reference/generated/numpy.allclose.html
+    """
     return abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
 def diff(sequence):
-    """Numpy-free replacement for np.diff()"""
+    """
+    Calculate the discrete difference along the given axis.
+    
+    Reference: https://numpy.org/doc/2.2/reference/generated/numpy.diff.html
+    """
     return [sequence[i+1] - sequence[i] for i in range(len(sequence)-1)]
 
-def solve_tridiagonal_system(n, h, f, k0, kn):
-    """Solve the tridiagonal system using the Thomas algorithm"""
+# Why use the tridiagonal matrix algorithm (TMDA) [Thomas Algorithm]?
+# Motivation:
+# How matrix A is set up:
+#---------------------------------------
+#   k0 + 4*k1 + 1*k2 + 0*k3 + 0*k4 + ...
+# 0*k0 + 1*k1 + 4*k2 + 1*k3 + 0*k4 + ...
+# 0*k0 + 0*k1 + 1*k2 + 4*k3 + 1*k4 + ...
+# ...
+
+# Put the coefficients in the matrix
+# [[ 4.  1.  0.  0. ...  0.]
+#  [ 1.  4.  1.  0. ...  0.]
+#  [ 0.  1.  4.  1. ...  0.]
+#  [ 0.  0.  1.  4. ...  0.]
+#  [... ... ... ... ... ...]
+#  [ 0. ...  0.  0.  1.  4.]]
+
+# The resulting matrix is always symmetric and tridiagonal.
+# The most practical and common solver for this system is 
+# the Thomas or tridiagonal matrix algorithm.
+def apply_TDMA(n, h, f, k0, kn):
+    """
+    Solve the tridiagonal system using the Thomas algorithm.
+
+    Reference: https://gist.github.com/vuddameri/75212bfab7d98a9c75861243a9f8f272
+    """
     # Initialize vectors
     A_diag = [4.0] * (n-1)   # Main diagonal
     A_sub = [1.0] * (n-2)    # Subdiagonal
@@ -35,7 +95,7 @@ def solve_tridiagonal_system(n, h, f, k0, kn):
     return [k0] + k_inner + [kn]
 
 def expand_polynomial(a0, a1, a2, a3, xj):
-    """Convert polynomial from (x-xj) form to standard x form"""
+    """Convert polynomial from (x-xj) form to standard/expanded x form"""
     # q(x) = a0 + a1*(x-xj) + a2*(x-xj)^2 + a3*(x-xj)^3
     # Expanded form: c0 + c1*x + c2*x^2 + c3*x^3
     xj_sq = xj * xj
@@ -79,7 +139,7 @@ def calculate_spline_coefficients(x, f, k, h):
     return splines
 
 def print_spline_results(splines):
-    """Print the spline results in a readable format without numpy"""
+    """Print the spline results in a readable format"""
     print("\nCubic Spline Results:")
     print("====================")
     
@@ -116,7 +176,7 @@ def calculate_cubic_spline(x_data, f_data, k0, kn):
 
     # Step 1: Solve for k values
     if n > 2:
-        k = solve_tridiagonal_system(n, h, f, k0, kn)
+        k = apply_TDMA(n, h, f, k0, kn)
     else:
         # Special case for only 3 points (1 interior point)
         k1 = (3.0/h) * (f[2] - f[0]) - k0 - kn

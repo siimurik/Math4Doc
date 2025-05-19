@@ -9,6 +9,8 @@ import math as m # Hope that at least this much is allowed
 #       \int_{-1}^{1}  f(t) dt \approx \sum_{j=1}^{n} A_{j} f_{j} 
 # with n = 5:
 # [22.] cos(x) from 0 to 0.5*pi
+#------------------------------------------------------------------------------
+# Author: Siim Erik Pugal
 #==============================================================================
 
 def gauss_legendre_nodes_weights(n):
