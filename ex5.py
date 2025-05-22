@@ -254,7 +254,7 @@ def print_boundary_conditions(boundary_conditions, grid_size=4):
                 print(f" {'u_'+str(i)+str(j):>{max_width}} |", end="")
         print("\n+" + ("-" * (max_width + 2) + "+") * grid_size)
 
-def print_temperature_grid(grid, title="Temperature Distribution"):
+def print_temp_grid(grid, title="Temperature Distribution"):
     """
     Prints the temperature grid in a visually appealing format.
     
@@ -295,14 +295,14 @@ def main():
 
     # Solve with Gaussian elimination
     solution_gauss, method_gauss = solve_plate_temp(boundary_conditions, method='gauss')
-    print_temperature_grid(solution_gauss, f"Solution using {method_gauss}")
+    print_temp_grid(solution_gauss, f"Solution using {method_gauss}")
 
     # Solve with Liebmann's method
     max_iter = 5
     solution_liebmann, method_liebmann = solve_plate_temp(
         boundary_conditions, method='liebmann', max_iter=max_iter, tol=1e-6, verbose=True
     )
-    print_temperature_grid(solution_liebmann, f"Solution using {method_liebmann} for {max_iter} steps")
+    print_temp_grid(solution_liebmann, f"Solution using {method_liebmann} for {max_iter} steps")
 
 if __name__ == "__main__":
     main()
