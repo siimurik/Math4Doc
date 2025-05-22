@@ -1,4 +1,3 @@
-#import numpy as np
 #==============================================================================
 #                               Problem description
 #==============================================================================
@@ -9,154 +8,301 @@
 # the details of your work) if the boundary values on the edges are:
 # [5.] u(1,0) = 60, u(2,0) = 300, u = 100 on the other three edges.
 # 
-#   *---*---*---*
-#   |   |   |   |
-#   *---o---o---*
-#   |   |   |   |
-#   *---o---o---*
-#   |   |   |   |
-#   *---*---*---*
+#   *---*---*---*           u_03 --- u_13 --- u_23 --- u_33
+#   |   |   |   |            |        |        |        |
+#   *---o---o---*           u_02 --- u_12 --- u_22 --- u_32
+#   |   |   |   |            |        |        |        |
+#   *---o---o---*           u_01 --- u_11 --- u_21 --- u_31
+#   |   |   |   |            |        |        |        |
+#   *---*---*---*           u_00 --- u_10 --- u_20 --- u_30
 #------------------------------------------------------------------------------
 # Author:     Siim Erik Pugal
 #==============================================================================
-class LaplaceSolver:
-    def __init__(self, width, height, h=1.0):
-        """
-        Initialize the solver with grid dimensions and spacing.
-        
-        Parameters:
-            width (int): Number of points in x-direction
-            height (int): Number of points in y-direction
-            h (float): Grid spacing (default 1.0)
-        """
-        self.width = width
-        self.height = height
-        self.h = h
-        # Initialize grid as list of lists
-        self.u = [[0.0 for _ in range(width)] for _ in range(height)]
-        self.boundary_conditions = {}
-        
-    def set_boundary_condition(self, position, value):
-        """
-        Set boundary conditions for specific points.
-        
-        Parameters:
-            position (tuple): (x, y) coordinates of boundary point
-            value (float): Boundary value at this point
-        """
-        self.boundary_conditions[position] = value
-        
-    def initialize(self, initial_value=0.0):
-        """
-        Initialize the grid with boundary conditions and initial values.
-        """
-        # Apply boundary conditions
-        for (x, y), value in self.boundary_conditions.items():
-            self.u[y][x] = value
-            
-        # Initialize internal points
-        for y in range(1, self.height-1):
-            for x in range(1, self.width-1):
-                if (x, y) not in self.boundary_conditions:
-                    self.u[y][x] = initial_value
-                    
-    def gauss_seidel_step(self):
-        """
-        Perform one Gauss-Seidel iteration.
-        """
-        # Create a deep copy of the current grid
-        new_u = [row.copy() for row in self.u]
-        
-        for y in range(1, self.height-1):
-            for x in range(1, self.width-1):
-                if (x, y) not in self.boundary_conditions:
-                    # Update using the latest available values
-                    new_u[y][x] = 0.25 * (
-                        new_u[y][x-1] + self.u[y][x+1] +  # Left and right
-                        new_u[y-1][x] + self.u[y+1][x]    # Top and bottom
-                    )
-        self.u = new_u
-        
-    def solve(self, max_iterations=100, tolerance=1e-6, verbose=True):
-        """
-        Solve the Laplace equation using Gauss-Seidel iteration.
-        
-        Returns:
-            list: The solution grid as a list of lists
-        """
-        # Create a deep copy for comparison
-        prev_u = [row.copy() for row in self.u]
-        
-        for iteration in range(max_iterations):
-            self.gauss_seidel_step()
-            
-            # Calculate maximum difference
-            max_diff = 0.0
-            for y in range(self.height):
-                for x in range(self.width):
-                    diff = abs(self.u[y][x] - prev_u[y][x])
-                    if diff > max_diff:
-                        max_diff = diff
-            
-            if max_diff < tolerance:
-                if verbose:
-                    print(f"Converged after {iteration+1} iterations")
-                break
-                
-            # Update previous grid
-            for y in range(self.height):
-                for x in range(self.width):
-                    prev_u[y][x] = self.u[y][x]
-            
-            if verbose and (iteration+1) % 10 == 0:
-                print(f"Iteration {iteration+1}, Max change: {max_diff:.6e}")
 
-            #if verbose:
-            #    #if max_diff < tolerance or iteration+1 == max_iterations:
-            #    print(f"Iteration {iteration+1}, Max change: {max_diff:.6e}")
-                
-        return self.u
+def construct_system(grid):
+    """
+    Constructs matrix A and vector b for the Laplace equation system Au = b.
     
-    def print_matrix(self):
-        """Print the matrix grid in a readable format."""
-        print("Matrix grid:")
-        for row in self.u:
-            print(" ".join(f"{val:8.3f}" for val in row))
+    Args:
+        grid: 2D list representing the temperature grid with boundary conditions
+        
+    Returns:
+        A: Coefficient matrix (4x4 for 4x4 grid with 4 unknowns)
+        b: Right-hand side vector
+        u: List of (i,j) positions of unknown variables
+    """
+    n = len(grid)
+    u = []
+    
+    # Find all unknown positions (where value is None)
+    for i in range(1, n-1):
+        for j in range(1, n-1):
+            if grid[i][j] is None:
+                u.append((i, j))
+    
+    num_unknowns = len(u)
+    A = [[0.0 for _ in range(num_unknowns)] for _ in range(num_unknowns)]
+    b = [0.0 for _ in range(num_unknowns)]
+    
+    # Create mapping from grid positions to equation indices
+    pos_to_idx = {pos: idx for idx, pos in enumerate(u)}
+    
+    for eq_idx, (i, j) in enumerate(u):
+        # Diagonal element
+        A[eq_idx][eq_idx] = -4.0
+        
+        # Check neighbors and fill matrix A and vector b
+        for di, dj in [(1,0), (-1,0), (0,1), (0,-1)]:
+            ni, nj = i + di, j + dj
+            if grid[ni][nj] is None:
+                # It's another unknown - find its index
+                neighbor_idx = pos_to_idx[(ni, nj)]
+                A[eq_idx][neighbor_idx] = 1.0
+            else:
+                # It's a known boundary value - add to b
+                b[eq_idx] -= grid[ni][nj]
+    
+    return A, b, u
 
+def gauss(A, b):
+    """
+    Solves a system of linear equations Ax = b using Gaussian elimination.
+    
+    Args:
+        A: Coefficient matrix (n x n)
+        b: Right-hand side vector (n x 1)
+        
+    Returns:
+        x: Solution vector if a unique solution exists
+        or 
+        str: "No unique solution exists" if the system has no unique solution
+    
+    Reference: Advanced Engineering Mathematics 10th Edition by Erwin Kreyszig (page 849)
+    """
+    n = len(A)
+    
+    # Create augmented matrix
+    aug = [row.copy() + [b[i]] for i, row in enumerate(A)]
+    
+    # Forward elimination with partial pivoting
+    for k in range(n - 1):
+        # Partial pivoting
+        max_row = k
+        for j in range(k + 1, n):
+            if abs(aug[j][k]) > abs(aug[max_row][k]):
+                max_row = j
+        
+        # Check for singular matrix
+        if aug[max_row][k] == 0:
+            return "No unique solution exists"
+        
+        # Swap rows if necessary
+        if max_row != k:
+            aug[k], aug[max_row] = aug[max_row], aug[k]
+        
+        # Elimination
+        for j in range(k + 1, n):
+            mjk = aug[j][k] / aug[k][k]
+            for p in range(k, n + 1):
+                aug[j][p] -= mjk * aug[k][p]
+    
+    # Check for singular matrix
+    if aug[n-1][n-1] == 0:
+        return "No unique solution exists"
+    
+    # Back substitution
+    x = [0] * n
+    x[n-1] = aug[n-1][n] / aug[n-1][n-1]
+    
+    for i in range(n-2, -1, -1):
+        sum_ax = 0
+        for j in range(i + 1, n):
+            sum_ax += aug[i][j] * x[j]
+        x[i] = (aug[i][n] - sum_ax) / aug[i][i]
+    
+    return x
 
-# Example usage for the 4x4 grid problem from the original question
+def gauss_seidel(A, b, x0=None, max_iter=100, tol=1e-6, verbose=False):
+    """
+    Solves a system of linear equations Ax = b using Gauss-Seidel iteration.
+    
+    Args:
+        A: Coefficient matrix (n x n)
+        b: Right-hand side vector (n x 1)
+        x0: Initial guess (defaults to zero vector)
+        max_iter: Maximum number of iterations
+        tol: Tolerance for convergence
+        verbose: Whether to print iteration info
+        
+    Returns:
+        x: Approximate solution 
+    
+    Reference: Advanced Engineering Mathematics 10th Edition by Erwin Kreyszig (page 860)
+    """
+    n = len(A)
+    
+    # Initialize solution vector
+    x = x0.copy() if x0 else [0.0 for _ in range(n)]
+    
+    # Check diagonal elements
+    for i in range(n):
+        if A[i][i] == 0:
+            raise ValueError(f"Zero diagonal element at A[{i}][{i}]")
+    
+    for iteration in range(max_iter):
+        x_prev = x.copy()
+        
+        for i in range(n):
+            sigma = 0.0
+            for j in range(n):
+                if j != i:
+                    sigma += A[i][j] * x[j]
+            x[i] = (b[i] - sigma) / A[i][i]
+        
+        # Calculate maximum relative error
+        max_error = max(abs(x[i] - x_prev[i]) / abs(x[i]) if x[i] != 0 else 0 
+                        for i in range(n))
+        
+        if verbose:
+            print(f"Iteration {iteration+1}: Max error = {max_error:.6f}")
+        
+        if max_error < tol:
+            if verbose:
+                print(f"Converged after {iteration+1} iterations")
+            break
+    
+    # Always return the current approximation
+    return x
+
+def solve_plate_temp(boundary_conditions, method='gauss', max_iter=100, tol=1e-6, verbose=False):
+    """
+    Solves the temperature distribution problem for a square plate.
+    
+    Args:
+        boundary_conditions: Dictionary of {(i,j): value} for boundary points
+        method: 'gauss' for Gaussian elimination or 'liebmann' for Gauss-Seidel
+        max_iter: Maximum iterations for Liebmann's method
+        tol: Tolerance for Liebmann's method
+        verbose: Whether to print iteration info
+        
+    Returns:
+        solution: Complete temperature grid with solved values
+        method_used: String indicating which method was used
+    """
+    # Create grid with None for unknown points
+    n = 4  # For 4x4 grid
+    grid = [[None for _ in range(n)] for _ in range(n)]
+    
+    # Apply boundary conditions
+    for (i, j), value in boundary_conditions.items():
+        grid[i][j] = value
+    
+    # Construct system
+    A, b, u = construct_system(grid)
+    
+    # Select and apply solution method
+    method_used = ""
+    if method.lower() in ['gauss', 'elimination', 'direct']:
+        method_used = "Gauss elimination"
+        solution = gauss(A, b)
+    elif method.lower() in ['liebmann', 'gauss-seidel', 'iterative']:
+        print("\nIterations steps for Liebmann's method (Gauss-Seidel):",
+        "\n======================================================")
+        method_used = "Liebmann's method (Gauss-Seidel)"
+        x0 = [100.0]*len(b)
+        print("Initial guess:", x0)
+        print("------------------------------------------------------")
+        solution = gauss_seidel(A, b, x0=x0, max_iter=max_iter, tol=tol, verbose=verbose)
+    else:
+        raise ValueError("Invalid method. Choose 'gauss' or 'liebmann'")
+    
+    # Fill in the solved values (regardless of convergence)
+    for idx, (i, j) in enumerate(u):
+        if isinstance(solution, list) and idx < len(solution):
+            grid[i][j] = solution[idx]
+        else:
+            grid[i][j] = None
+    
+    return grid, method_used
+
+def print_boundary_conditions(boundary_conditions, grid_size=4):
+    """
+    Prints the boundary conditions with unknown nodes marked as u_{ij}.
+    
+    Args:
+        boundary_conditions: Dictionary of {(i,j): value} for boundary points
+        grid_size: Size of the grid (default 4 for 4x4 grid)
+    """
+    # Determine the maximum width needed for any element
+    max_val_width = max(len(str(val)) for val in boundary_conditions.values())
+    max_label_width = max(len(f"u_{i}{j}") for i in range(grid_size) 
+                                      for j in range(grid_size))
+    max_width = max(max_val_width, max_label_width)
+    
+    print("\nBoundary Conditions with Unknown Nodes:")
+    print("+" + ("-" * (max_width + 2) + "+") * grid_size)
+    
+    for i in range(grid_size):
+        print("|", end="")
+        for j in range(grid_size):
+            pos = (i, j)
+            if pos in boundary_conditions:
+                # Known boundary value
+                print(f" {boundary_conditions[pos]:>{max_width}} |", end="")
+            else:
+                # Unknown node - print as u_{ij}
+                print(f" {'u_'+str(i)+str(j):>{max_width}} |", end="")
+        print("\n+" + ("-" * (max_width + 2) + "+") * grid_size)
+
+def print_temperature_grid(grid, title="Temperature Distribution"):
+    """
+    Prints the temperature grid in a visually appealing format.
+    
+    Args:
+        grid: 2D list of temperature values
+        title: Header for the printed output
+    """
+    n = len(grid)
+    # Determine the maximum width needed for any element
+    max_width = max(len(f"{val:.1f}") if val is not None else len("None") 
+                   for row in grid for val in row)
+    
+    print(f"\n{title}:")
+    print("+" + ("-" * (max_width + 2) + "+") * n)
+    
+    for i, row in enumerate(grid):
+        print("|", end="")
+        for val in row:
+            if val is None:
+                print(f" {'None':>{max_width}} |", end="")
+            else:
+                print(f" {val:>{max_width}.1f} |", end="")  # Fixed this line
+        print("\n+" + ("-" * (max_width + 2) + "+") * n)
+
 def main():
-    # Create a 4x4 grid solver
-    solver = LaplaceSolver(4, 4)
-    
-    # Set boundary conditions
-    solver.set_boundary_condition((0, 0), 100)
-    solver.set_boundary_condition((1, 0), 60)
-    solver.set_boundary_condition((2, 0), 300)
-    solver.set_boundary_condition((3, 0), 100)
-    
-    # Set all other edges to 100
-    for i in range(4):
-        solver.set_boundary_condition((i, 3), 100)  # Top edge
-    for j in range(4):
-        solver.set_boundary_condition((0, j), 100)  # Left edge
-        solver.set_boundary_condition((3, j), 100)  # Right edge
-    
-    # Initialize with starting values of 100 for internal points
-    solver.initialize(100)
-    print("Initial matrix:")
-    solver.print_matrix()
+    # Boundary conditions:
+    boundary_conditions = {
+        #                           Top side
+        (0, 0): 100.0, (0, 1): 100.0, (0, 2): 100.0, (0, 3): 100.0,   # Left - Right side
+        (1, 0): 100.0,                               (1, 3): 100.0,   # Left - Right side
+        (2, 0): 100.0,                               (2, 3): 100.0,   # Left - Right side
+        (3, 0): 100.0, (3, 1):  60.0, (3, 2): 300.0, (3, 3): 100.0    # Left - Right side
+        #                           Bottom side
+    }
 
-    # Solve with 5 iterations (as per original problem)
-    print("\nSolving with 5 iterations:")
-    solver.solve(max_iterations=5, tolerance=0, verbose=False)
-    solver.print_matrix()
-    
-    # For a more complete solution (until convergence)
-    print("\nSolving until convergence (tolerance=1e-12):")
-    solver.initialize(100)  # Reset
-    solver.solve(max_iterations=1000, tolerance=1e-12)
-    solver.print_matrix()
+    # Print the values for initial problem setup
+    print_boundary_conditions(boundary_conditions)
+
+    # Solve with Gaussian elimination
+    solution_gauss, method_gauss = solve_plate_temp(boundary_conditions, method='gauss')
+    print_temperature_grid(solution_gauss, f"Solution using {method_gauss}")
+
+    # Solve with Liebmann's method
+    max_iter = 5
+    solution_liebmann, method_liebmann = solve_plate_temp(
+        boundary_conditions, method='liebmann', max_iter=max_iter, tol=1e-6, verbose=True
+    )
+    print_temperature_grid(solution_liebmann, f"Solution using {method_liebmann} for {max_iter} steps")
 
 if __name__ == "__main__":
     main()
