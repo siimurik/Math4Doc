@@ -3,7 +3,7 @@
 #==============================================================================
 # GAUSS ELIMINATION, GAUSS–SEIDEL ITERATION
 #------------------------------------------------------------------------------
-# For the n Fig. 456 compute the potential at the four internal points by Gauss 
+# For the in Fig. 456 compute the potential at the four internal points by Gauss 
 # and by 5 Gauss–Seidel steps with starting values 100, 100, 100, 100 (showing 
 # the details of your work) if the boundary values on the edges are:
 # [5.] u(1,0) = 60, u(2,0) = 300, u = 100 on the other three edges.
