@@ -146,6 +146,7 @@ def print_spline_results(splines):
     print("\nSegment Coefficients (q_j(x) = a0 + a1*(x-xj) + a2*(x-xj)^2 + a3*(x-xj)^3):")
     for i, s in enumerate(splines):
         print(f"\nSegment {i} (x ∈ [{s['interval'][0]}, {s['interval'][1]}]):")
+        #print(f"\nSegment {i} (x is an element of [{s['interval'][0]}, {s['interval'][1]}]):")
         print(f"a0 = {s['coefficients'][0]:.6f}")
         print(f"a1 = {s['coefficients'][1]:.6f}")
         print(f"a2 = {s['coefficients'][2]:.6f}")
@@ -155,6 +156,8 @@ def print_spline_results(splines):
     for i, s in enumerate(splines):
         c = s['expanded']
         print(f"q_{i}(x) = {c[3]:.4f}x³ + {c[2]:.4f}x² + {c[1]:.4f}x + {c[0]:.4f}")
+        #print(f"q_{i}(x) = {c[3]:.4f}x^3 + {c[2]:.4f}x^2 + {c[1]:.4f}x + {c[0]:.4f}")
+
 
 def calculate_cubic_spline(x_data, f_data, k0, kn):
     # Convert to float
