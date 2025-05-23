@@ -90,6 +90,7 @@ def main():
     result = gauss_quadrature_integrate(f, a, b, n)
     exact = 1.0  # Exact integral of cos(x) from 0 to pi/2
 
+    #print(f"\nIntegrating cos(x) from 0 to pi/2 with {n} points:")
     print(f"\nIntegrating cos(x) from 0 to π/2 with {n} points:")
     print(f"Approximate result: {result:.15f}")
     print(f"Exact result: {exact:.15f}")
