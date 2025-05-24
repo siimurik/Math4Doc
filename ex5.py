@@ -256,7 +256,7 @@ def print_boundary_conditions(boundary_conditions, grid_size=4):
 
 def print_temp_grid(grid, title="Temperature Distribution"):
     """
-    Prints the temperature grid in a visually appealing format.
+    Prints the temperature nodes in a grid format.
     
     Args:
         grid: 2D list of temperature values
